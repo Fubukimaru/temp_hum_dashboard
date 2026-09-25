@@ -1,12 +1,14 @@
 [Unit]
-Description=Casa Temperature and Humidity Dashboard
+Description=Temperature and Humidity Dashboard
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
+User=fubu
+WorkingDirectory=/home/fubu/workspace/temp_hum_dashboard
 
-ExecStart=/usr/bin/python /home/fubu/workspace/temp_hum_dashboard/dashboard.py
+ExecStart=/home/fubu/workspace/temp_hum_dashboard/.venv/bin/python /home/fubu/workspace/temp_hum_dashboard/dashboard.py
 
 Restart=on-failure
 RestartSec=5
