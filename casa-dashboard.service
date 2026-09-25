@@ -1,0 +1,15 @@
+[Unit]
+Description=Casa Temperature and Humidity Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+ExecStart=/usr/bin/python /home/fubu/workspace/temp_hum_dashboard/dashboard.py
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
