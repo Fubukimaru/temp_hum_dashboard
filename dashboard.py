@@ -1,5 +1,4 @@
 from influxdb import InfluxDBClient
-import pandas as pd
 
 from dash import Dash, dcc, html, Input, Output
 import plotly.graph_objects as go
@@ -35,43 +34,46 @@ def read_measurement(measurement, minutes, interval):
     """
 
     result = client.query(query)
-    frames = []
+
+    series = []
 
     for (_, tags), points in result.items():
-        df = pd.DataFrame(points)
+        points = list(points)
 
-        if df.empty:
-            continue
+        series.append({
+            "sensor": tags["sensor_id"],
+            "points": points,
+        })
 
-        df["time"] = pd.to_datetime(df["time"])
-        df["sensor"] = tags["sensor_id"]
-
-        frames.append(df)
-
-    if not frames:
-        return pd.DataFrame(columns=["time", "value", "sensor"])
-
-    return pd.concat(frames, ignore_index=True)
+    return series
 
 
 # ----------------------------------------------------------------------
 # Plot creation
 # ----------------------------------------------------------------------
 
-def make_graph(df, title, unit):
+def make_graph(series, title, unit):
     fig = go.Figure()
 
-    for sensor in df["sensor"].unique():
-        sensor_df = df[df["sensor"] == sensor]
+    for item in series:
+        sensor = item["sensor"]
+        points = item["points"]
+
+        times = []
+        values = []
+
+        for point in points:
+            if point["value"] is not None:
+                times.append(point["time"])
+                values.append(point["value"])
 
         fig.add_trace(
             go.Scatter(
-                x=sensor_df["time"],
-                y=sensor_df["value"],
+                x=times,
+                y=values,
                 mode="lines",
                 name=sensor,
                 line=dict(width=2),
-
                 hovertemplate=(
                     f"<b>{sensor}</b><br>"
                     f"%{{y:.1f}} {unit}<br>"
@@ -82,11 +84,7 @@ def make_graph(df, title, unit):
         )
 
     fig.update_layout(
-        title=dict(
-            text=title,
-            font=dict(size=22),
-        ),
-
+        title=dict(text=title, font=dict(size=22)),
         template="plotly_dark",
         height=400,
         hovermode="x unified",
@@ -113,9 +111,7 @@ def make_graph(df, title, unit):
         ),
     )
 
-    fig.update_xaxes(
-        showgrid=False,
-    )
+    fig.update_xaxes(showgrid=False)
 
     fig.update_yaxes(
         gridcolor="rgba(255,255,255,0.08)",
