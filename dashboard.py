@@ -2,6 +2,8 @@ from influxdb import InfluxDBClient
 
 from dash import Dash, dcc, html, Input, Output
 import plotly.graph_objects as go
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 
 # ----------------------------------------------------------------------
@@ -11,6 +13,7 @@ import plotly.graph_objects as go
 INFLUX_HOST = "afrodita.local"
 INFLUX_PORT = 8086
 INFLUX_DATABASE = "casa"
+LOCAL_TIMEZONE = ZoneInfo("Europe/Madrid")
 
 
 # ----------------------------------------------------------------------
@@ -52,6 +55,13 @@ def read_measurement(measurement, minutes, interval):
 # Plot creation
 # ----------------------------------------------------------------------
 
+def to_local_time(timestamp):
+    timestamp = timestamp.replace("Z", "+00:00")
+    utc_time = datetime.fromisoformat(timestamp)
+
+    return utc_time.astimezone(LOCAL_TIMEZONE).replace(tzinfo=None)
+
+
 def make_graph(series, title, unit):
     fig = go.Figure()
 
@@ -64,7 +74,7 @@ def make_graph(series, title, unit):
 
         for point in points:
             if point["value"] is not None:
-                times.append(point["time"])
+                times.append(to_local_time(point["time"]))
                 values.append(point["value"])
 
         fig.add_trace(
@@ -127,6 +137,33 @@ def make_graph(series, title, unit):
 
 app = Dash(__name__)
 app.title = "Casa"
+app.index_string = """
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>{%title%}</title>
+        {%favicon%}
+        {%css%}
+        <style>
+            html,
+            body {
+                margin: 0;
+                min-height: 100%;
+                background: #111827;
+            }
+        </style>
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>
+"""
 
 
 app.layout = html.Div(
